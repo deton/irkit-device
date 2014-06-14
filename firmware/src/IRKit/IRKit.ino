@@ -23,23 +23,34 @@
 #include "IrCtrl.h"
 #include "IrPacker.h"
 #include "FullColorLed.h"
+#ifdef USE_WIFI
 #include "GSwifi.h"
 #include "Keys.h"
+#endif
 #include "timer.h"
 #include "longpressbutton.h"
+#ifdef USE_WIFI
 #include "IRKitHTTPHandler.h"
 #include "commands.h"
+#endif
 #include "version.h"
 #include "log.h"
+#ifdef SERIAL_CTRL
+#include "IRKitJSONParser.h"
+#endif
 
 static struct long_press_button_state_t long_press_button_state;
+#ifdef USE_WIFI
 static volatile uint8_t reconnect_timer = TIMER_OFF;
 static char commands_data[COMMAND_QUEUE_SIZE];
+#endif
 static FullColorLed color( FULLCOLOR_LED_R, FULLCOLOR_LED_G, FULLCOLOR_LED_B );
 
+#ifdef USE_WIFI
 struct RingBuffer commands;
 GSwifi gs(&Serial1X);
 Keys keys;
+#endif
 unsigned long now;
 volatile char sharedbuffer[ SHARED_BUFFER_SIZE ];
 
@@ -48,7 +59,9 @@ void setup() {
 
     // while ( ! Serial ) ;
 
+#ifdef USE_WIFI
     ring_init( &commands, commands_data, COMMAND_QUEUE_SIZE );
+#endif
 
     //--- initialize timer
 
@@ -79,18 +92,66 @@ void setup() {
 
     IR_initialize( &on_ir_receive );
 
+#ifdef USE_WIFI
     //--- initialize Wifi
 
     pinMode(LDO33_ENABLE,     OUTPUT);
     wifi_hardware_reset();
     irkit_http_init();
+#else
+    while ( ! Serial ) ;
+    IR_state( IR_IDLE );
+    on_irkit_ready();
+#endif
 
     // add your own code here!!
 }
 
+#ifdef SERIAL_CTRL
+static void on_json_start() {
+    IR_state( IR_WRITING );
+}
+
+static void on_json_data( uint8_t key, uint32_t value ) {
+    if ( IrCtrl.state != IR_WRITING ) {
+        return;
+    }
+
+    switch (key) {
+    case IrJsonParserDataKeyFreq:
+        IrCtrl.freq = value;
+        break;
+    case IrJsonParserDataKeyData:
+        IR_put( value );
+        break;
+    default:
+        break;
+    }
+}
+
+static void on_json_end() {
+    if ( IrCtrl.state != IR_WRITING ) {
+        MAINLOG_PRINTLN("!E5");
+        IR_dump();
+        return;
+    }
+
+    IR_xmit();
+    on_ir_xmit();
+}
+
+static void parse_json( char letter ) {
+    irkit_json_parse( letter,
+                      &on_json_start,
+                      &on_json_data,
+                      &on_json_end );
+}
+#endif
+
 void loop() {
     now = millis(); // always run first
 
+#ifdef USE_WIFI
     irkit_http_loop();
 
     if (TIMER_FIRED(reconnect_timer)) {
@@ -101,8 +162,16 @@ void loop() {
     process_commands();
 
     gs.loop();
+#endif
 
     IR_loop();
+
+#ifdef SERIAL_CTRL
+    while (Serial.available()) {
+        char letter = Serial.read();
+        parse_json( letter );
+    }
+#endif
 
 #ifdef DEBUG
     if (Serial.available()) {
@@ -150,6 +219,7 @@ void loop() {
     // add your own code here!!
 }
 
+#ifdef USE_WIFI
 void wifi_hardware_reset () {
     MAINLOG_PRINTLN("!E25");
 
@@ -165,15 +235,19 @@ void wifi_hardware_reset () {
 
     ring_put( &commands, COMMAND_SETUP );
 }
+#endif
 
 void long_pressed() {
     color.setLedColor( 1, 0, 0, false ); // red: error
 
+#ifdef USE_WIFI
     keys.clear();
     keys.save();
+#endif
     software_reset();
 }
 
+#ifdef USE_WIFI
 void process_commands() {
     while (! ring_isempty(&commands)) {
         char command;
@@ -209,10 +283,32 @@ void process_commands() {
         }
     }
 }
+#endif
 
 void on_irkit_ready() {
     color.setLedColor( 0, 0, 1, false ); // blue: ready
 }
+
+#ifdef SERIAL_CTRL
+static int8_t output_received_ir() {
+    IR_state( IR_READING );
+
+    Serial.print("{\"format\":\"raw\",\"freq\":"); // format fixed to "raw" for now
+    Serial.print(IrCtrl.freq);
+    Serial.print(",\"data\":[");
+    for (uint16_t i=0; i<IrCtrl.len; i++) {
+        Serial.print( IR_get() );
+        if (i != IrCtrl.len - 1) {
+            Serial.print(",");
+        }
+    }
+    Serial.println("]}");
+
+    IR_state( IR_IDLE );
+
+    return 0;
+}
+#endif
 
 void on_ir_receive() {
     MAINLOG_PRINTLN("i<");
@@ -221,6 +317,9 @@ void on_ir_receive() {
 #endif
     if (IR_packedlength() > 0) {
         color.setLedColor( 0, 0, 1, true, 1 ); // received: blue blink for 1sec
+#ifdef SERIAL_CTRL
+        output_received_ir();
+#endif
 #ifdef USE_INTERNET
         irkit_httpclient_post_messages();
 #endif
@@ -236,6 +335,7 @@ void on_ir_xmit() {
 void on_timer() {
     color.onTimer(); // 200msec blink
 
+#ifdef USE_WIFI
 #ifdef USE_INTERNET
     irkit_http_on_timer();
 #endif
@@ -243,12 +343,14 @@ void on_timer() {
     TIMER_TICK( reconnect_timer );
 
     gs.onTimer();
+#endif
 
     IR_timer();
 
     long_press_button_ontimer( &long_press_button_state );
 }
 
+#ifdef USE_WIFI
 int8_t on_reset() {
     MAINLOG_PRINTLN("!E10");
 
@@ -318,6 +420,7 @@ void connect() {
         }
     }
 }
+#endif
 
 void software_reset() {
     wdt_enable(WDTO_15MS);
