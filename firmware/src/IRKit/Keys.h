@@ -28,6 +28,9 @@
 // see H.4.1 of IEEE 802.11
 #define MAX_WIFI_PASSWORD_LENGTH 63
 
+// EAP user name
+#define MAX_WIFI_EAPUSER_LENGTH  63
+
 // it's an UUID (without '-')
 #define MAX_KEY_LENGTH           32
 
@@ -37,9 +40,9 @@ enum KeysFillerState {
     KeysFillerStatePassword  = 2,
     KeysFillerStateKey       = 3,
     KeysFillerStateRegdomain = 4,
-    KeysFillerStateReserved2 = 5,
-    KeysFillerStateReserved3 = 6,
-    KeysFillerStateReserved4 = 7,
+    KeysFillerStateEapOuter  = 5,
+    KeysFillerStateEapInner  = 6,
+    KeysFillerStateEapUser   = 7,
     KeysFillerStateReserved5 = 8,
     KeysFillerStateReserved6 = 9,
     KeysFillerStateCRC       = 10,
@@ -73,6 +76,9 @@ class Keys {
     const char* getPassword();
     const char* getKey();
     char getRegDomain();
+    GSEAPOUTER getEapOuter();
+    GSEAPINNER getEapInner();
+    const char* getEapUser();
     void set(GSSECURITY security, const char *ssid, const char *pass);
     void setKey(const char *key);
     void setWifiWasValid(bool valid);
@@ -96,7 +102,7 @@ class Keys {
     // and that's going to happen when other classes (ex: IR) uses global.buffer.
     // CRC is used to detect EEPROM corruption and corruption during Morse communication
 
-    // sizeof -> 134
+    // sizeof -> 200 // EEPROM_INDEPENDENT_OFFSET in const.h
     struct KeysShared
     {
         uint8_t    security;
@@ -116,6 +122,10 @@ class Keys {
         // and key is accessed through KeysIndependent afterwards
         char       temp_key[MAX_KEY_LENGTH           + 1];
 
+        uint8_t    eapouter;
+        uint8_t    eapinner;
+        char       eapuser [MAX_WIFI_EAPUSER_LENGTH  + 1];
+
         uint8_t    crc8;
     } __attribute__ ((packed));
 
@@ -124,6 +134,9 @@ class Keys {
         uint8_t    security;
         char       ssid    [MAX_WIFI_SSID_LENGTH     + 1];
         char       password[MAX_WIFI_PASSWORD_LENGTH + 1];
+        char       eapuser [MAX_WIFI_EAPUSER_LENGTH  + 1];
+        uint8_t    eapouter;
+        uint8_t    eapinner;
         bool       wifi_is_set;
         bool       wifi_was_valid;
 

@@ -981,7 +981,7 @@ void GSwifi::waitResponse (uint8_t timeout_second) {
     }
 }
 
-int8_t GSwifi::join (GSSECURITY sec, const char *ssid, const char *pass, int dhcp, char *name_) {
+int8_t GSwifi::join (GSSECURITY sec, const char *ssid, const char *pass, GSEAPOUTER eapouter, GSEAPINNER eapinner, const char *eapuser, int dhcp, char *name_) {
     char *cmd;
     uint8_t offset;
 
@@ -1021,7 +1021,7 @@ int8_t GSwifi::join (GSSECURITY sec, const char *ssid, const char *pass, int dhc
         // normal people don't understand difference between wep open/shared.
         // so we try shared first, and when it failed, try open
         if (gs_failure_ && (sec == GSSECURITY_WEP)) {
-            return join(GSSECURITY_OPEN, ssid, pass, dhcp, name_);
+            return join(GSSECURITY_OPEN, ssid, pass, eapouter, eapinner, eapuser, dhcp, name_);
         }
         break;
     case GSSECURITY_WPA_PSK:
@@ -1054,8 +1054,31 @@ int8_t GSwifi::join (GSSECURITY sec, const char *ssid, const char *pass, int dhc
         command(cmd, GSCOMMANDMODE_DHCP, GS_TIMEOUT_LONG);
 
         if (gs_failure_) {
-            return join(GSSECURITY_WPA_PSK, ssid, pass, dhcp, name_);
+            return join(GSSECURITY_WPA_PSK, ssid, pass, eapouter, eapinner, eapuser, dhcp, name_);
         }
+        break;
+    case GSSECURITY_WPA2_ENTERPRISE:
+        command(PB("AT+WAUTH=0",1), GSCOMMANDMODE_NORMAL);
+
+        cmd = PB("AT+WEAPCONF=%,%,%,%",1);
+        offset = 12;
+        cmd[ offset++ ] = i2x(eapouter / 10);
+        cmd[ offset++ ] = i2x(eapouter % 10);
+        cmd[ offset++ ] = ',';
+        if (eapinner >= 10) {
+            cmd[ offset++ ] = i2x(eapinner / 10);
+        }
+        cmd[ offset++ ] = i2x(eapinner % 10);
+        cmd[ offset++ ] = ',';
+        strcpy( cmd+offset, eapuser );
+        offset += strlen(eapuser);
+        cmd[ offset++ ] = ',';
+        strcpy( cmd+offset, pass );
+        command(cmd, GSCOMMANDMODE_NORMAL, GS_TIMEOUT_LONG);
+
+        cmd = PB("AT+WA=%",1);
+        strcpy( cmd+6, ssid);
+        command(cmd, GSCOMMANDMODE_DHCP, GS_TIMEOUT_LONG);
         break;
     default:
         return -1;

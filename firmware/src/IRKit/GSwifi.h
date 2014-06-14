@@ -124,15 +124,18 @@ public:
     void waitResponse (uint8_t timeout_second);
     /**
      * associate infrastructure
-     * @param sec GSSEC_OPEN, GSSEC_WEP, GSSEC_WPA_PSK, GSSEC_WPA2_PSK
+     * @param sec GSSEC_OPEN, GSSEC_WEP, GSSEC_WPA_PSK, GSSEC_WPA2_PSK, GSSECURITY_WPA2_ENTERPRISE
      * @param ssid SSID
      * @param pass pass phrase
+     * @param eapouter GSEAPOUTER_FAST, GSEAPOUTER_TLS, GSEAPOUTER_TTLS, GSEAPOUTER_PEAP
+     * @param eapinner GSEAPINNER_MSCHAP, GSEAPINNER_GTC
+     * @param eapuser user name for EAP
      * @param dhcp 0:static ip, 1:dhcp
      * @param name my host name
      * @retval 0 success
      * @retval -1 failure
      */
-    int8_t join (GSSECURITY sec, const char *ssid, const char *pass, int dhcp = 1, char *name = NULL);
+    int8_t join (GSSECURITY sec, const char *ssid, const char *pass, GSEAPOUTER eapouter = GSEAPOUTER_NONE, GSEAPINNER eapinner = GSEAPINNER_NONE, const char *eapuser = NULL, int dhcp = 1, char *name = NULL);
     bool isJoined ();
 
     int listen (uint16_t port);

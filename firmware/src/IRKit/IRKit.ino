@@ -274,7 +274,10 @@ void connect() {
 
         gs.join(keys.getSecurity(),
                 keys.getSSID(),
-                keys.getPassword());
+                keys.getPassword(),
+                keys.getEapOuter(),
+                keys.getEapInner(),
+                keys.getEapUser());
     }
 
     if (gs.isJoined()) {

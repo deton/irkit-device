@@ -59,6 +59,7 @@ void Keys::load()
 bool Keys::isCRCOK()
 {
     uint8_t crc = crc8( (uint8_t*)data, sizeof(KeysCRCed) );
+    // KEYLOG_PRINTLN2(crc, HEX);
     return (crc == data->crc8);
 }
 
@@ -101,6 +102,21 @@ const char* Keys::getPassword()
 const char* Keys::getKey()
 {
     return data2.key;
+}
+
+GSEAPOUTER Keys::getEapOuter()
+{
+    return (GSEAPOUTER)data->eapouter;
+}
+
+GSEAPINNER Keys::getEapInner()
+{
+    return (GSEAPINNER)data->eapinner;
+}
+
+const char* Keys::getEapUser()
+{
+    return data->eapuser;
 }
 
 void Keys::set(GSSECURITY security, const char *ssid, const char *pass)
@@ -156,12 +172,12 @@ void Keys::clearKey(void)
     memset( &data2, 0, sizeof(KeysIndependent) );
 }
 
-// we use morse code to transfer Security, SSID, Password, Key, REGDOMAIN, CRC8 to IRKit device
+// we use morse code to transfer Security, SSID, Password, Key, REGDOMAIN, EAPOuter, EAPInner, EAPUser, CRC8 to IRKit device
 // SSID can be multi byte, so we transfer HEX 4bit as 1 ASCII character (0-9A-F),
 // so we need 2 morse letters to transfer a single character.
 // we might want to transfer more in the future (like static IP), so prepare reserved state
 // future iOS and firmware can support more parameters, while still supporting old firmware
-// [0248]/#{SSID}/#{Password}/#{Key}/#{RegDomain}//////#{CRC}
+// [02489]/#{SSID}/#{Password}/#{Key}/#{RegDomain}/#{EAPOuter}/#{EAPInner}/#{EAPUser}///#{CRC}
 int8_t Keys::put(char code)
 {
     static uint8_t  character;
@@ -175,6 +191,7 @@ int8_t Keys::put(char code)
         case KeysFillerStateSSID:
         case KeysFillerStatePassword:
         case KeysFillerStateKey:
+        case KeysFillerStateEapUser:
             container[ filler.index ] = 0;
             break;
         default:
@@ -201,6 +218,10 @@ int8_t Keys::put(char code)
             case KeysFillerStateRegdomain:
                 // defaults to 2
                 regdomain = REGDOMAIN_TELEC;
+                break;
+            case KeysFillerStateEapUser:
+                container  = data->eapuser;
+                max_length = MAX_WIFI_EAPUSER_LENGTH;
                 break;
             default:
                 break;
@@ -233,6 +254,9 @@ int8_t Keys::put(char code)
         case '8': // GSwifi::GSSECURITY_WPA2_PSK:
             data->security = (GSSECURITY)x2i(code);
             return 0;
+        case '9':
+            data->security = GSSECURITY_WPA2_ENTERPRISE;
+            return 0;
         default:
             KEYLOG_PRINT("!E22:"); KEYLOG_PRINTLN2( code, HEX );
             return -1;
@@ -249,11 +273,46 @@ int8_t Keys::put(char code)
         return 0;
     }
 
+    if (filler.state == KeysFillerStateEapOuter) {
+        switch (code) {
+        case '1':
+            data->eapouter = GSEAPOUTER_FAST;
+            break;
+        case '2':
+            data->eapouter = GSEAPOUTER_TLS;
+            break;
+        case '3':
+            data->eapouter = GSEAPOUTER_TTLS;
+            break;
+        case '4':
+            data->eapouter = GSEAPOUTER_PEAP;
+            break;
+        default:
+            KEYLOG_PRINT("!E30:"); KEYLOG_PRINTLN2( code, HEX );
+            return -1;
+        }
+        return 0;
+    }
+    if (filler.state == KeysFillerStateEapInner) {
+        switch (code) {
+        case '1':
+            data->eapinner = GSEAPINNER_MSCHAP;
+            break;
+        case '2':
+            data->eapinner = GSEAPINNER_GTC;
+            break;
+        default:
+            KEYLOG_PRINT("!E31:"); KEYLOG_PRINTLN2( code, HEX );
+            return -1;
+        }
+        return 0;
+    }
+
     if (filler.state == KeysFillerStateKey) {
         character = code;
     }
     else {
-        // ssid, password might be Japanese character,
+        // ssid, password, eapuser might be Japanese character,
         // so we transfer utf8 bytes 0x00-0xFF as pair of [0-F] ASCII letters
         // so 2 bytes construct 1 character, network *bit* order
         // also CRC is transfered in HEX (pair of [0-F] ASCII letters)
@@ -320,10 +379,13 @@ void Keys::dump(void)
 
     // KEYLOG_PRINT("E:");
     // KEYLOG_PRINTLN(data->security);
+    // KEYLOG_PRINTLN(data->eapouter);
+    // KEYLOG_PRINTLN(data->eapinner);
 
     // KEYLOG_PRINT("S:");
     // KEYLOG_PRINTLN((const char*)data->ssid);
     // KEYLOG_PRINTLN((const char*)data->password);
     // KEYLOG_PRINTLN((const char*)data2.key);
-    // KEYLOG_PRINTLN(data->crc8, HEX);
+    // KEYLOG_PRINTLN((const char*)data->eapuser);
+    // KEYLOG_PRINTLN2(data->crc8, HEX);
 }

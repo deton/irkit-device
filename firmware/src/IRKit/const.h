@@ -22,13 +22,13 @@
 #define EEPROM_KEYS_OFFSET                0
 
 // sizeof(KeysShared)
-#define EEPROM_INDEPENDENT_OFFSET       134
+#define EEPROM_INDEPENDENT_OFFSET       200
 
 // sizeof(KeysShared) + sizeof(KeysIndependent)
-#define EEPROM_PACKERTREE_OFFSET        169
+#define EEPROM_PACKERTREE_OFFSET        235
 
 // sizeof(KeysShared) + sizeof(KeysIndependent) + sizeof(tree)
-#define EEPROM_LIMITEDAPPASSWORD_OFFSET 505
+#define EEPROM_LIMITEDAPPASSWORD_OFFSET 571
 // length = 10 characters + NULL
 #define EEPROM_LIMITEDAPPASSWORD_LENGTH  11
 
