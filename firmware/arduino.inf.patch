@@ -1,0 +1,34 @@
+--- arduino.inf.1.0.5-r2	Wed Jan  8 20:45:42 2014
++++ arduino.inf	Sun Jun  8 16:26:22 2014
+@@ -11,6 +11,7 @@
+ esplora.sketch.name="Arduino Esplora"
+ leonardo.bootloader.name="Arduino Leonardo bootloader"
+ leonardo.sketch.name="Arduino Leonardo"
++irkit.sketch.name="IRKit"
+ lilypadUSB.bootloader.name="Arduino LilyPad USB bootloader"
+ lilypadUSB.sketch.name="Arduino LilyPad USB"
+ mega2560.name="Arduino Mega 2560"
+@@ -56,6 +57,7 @@
+ %esplora.sketch.name%=DriverInstall, USB\VID_2341&PID_803C&MI_00
+ %leonardo.bootloader.name%=DriverInstall, USB\VID_2341&PID_0036
+ %leonardo.sketch.name%=DriverInstall, USB\VID_2341&PID_8036&MI_00
++%irkit.sketch.name%=DriverInstall, USB\VID_1D50&PID_6085&MI_00
+ %lilypadUSB.bootloader.name%=DriverInstall, USB\VID_1B4F&PID_9207
+ %lilypadUSB.sketch.name%=DriverInstall, USB\VID_1B4F&PID_9208&MI_00
+ %mega2560rev3.name%=DriverInstall, USB\VID_2341&PID_0042
+@@ -82,6 +84,7 @@
+ %esplora.sketch.name%=DriverInstall, USB\VID_2341&PID_803C&MI_00
+ %leonardo.bootloader.name%=DriverInstall, USB\VID_2341&PID_0036
+ %leonardo.sketch.name%=DriverInstall, USB\VID_2341&PID_8036&MI_00
++%irkit.sketch.name%=DriverInstall, USB\VID_1D50&PID_6085&MI_00
+ %lilypadUSB.bootloader.name%=DriverInstall, USB\VID_1B4F&PID_9207
+ %lilypadUSB.sketch.name%=DriverInstall, USB\VID_1B4F&PID_9208&MI_00
+ %mega2560rev3.name%=DriverInstall, USB\VID_2341&PID_0042
+@@ -105,6 +108,7 @@
+ %esplora.sketch.name%=DriverInstall, USB\VID_2341&PID_803C&MI_00
+ %leonardo.bootloader.name%=DriverInstall, USB\VID_2341&PID_0036
+ %leonardo.sketch.name%=DriverInstall, USB\VID_2341&PID_8036&MI_00
++%irkit.sketch.name%=DriverInstall, USB\VID_1D50&PID_6085&MI_00
+ %lilypadUSB.bootloader.name%=DriverInstall, USB\VID_1B4F&PID_9207
+ %lilypadUSB.sketch.name%=DriverInstall, USB\VID_1B4F&PID_9208&MI_00
+ %mega2560rev3.name%=DriverInstall, USB\VID_2341&PID_0042
