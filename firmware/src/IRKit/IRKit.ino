@@ -180,9 +180,11 @@ void process_commands() {
         ring_get( &commands, &command, 1 );
 
         switch (command) {
+#ifdef USE_INTERNET
         case COMMAND_POST_KEYS:
             irkit_httpclient_post_keys();
             break;
+#endif
         case COMMAND_SETUP:
             gs.setup( &on_disconnect, &on_reset );
 
@@ -194,9 +196,11 @@ void process_commands() {
             ring_get( &commands, &command, 1 );
             gs.close(command);
             break;
+#ifdef USE_INTERNET
         case COMMAND_START_POLLING:
             irkit_httpclient_start_polling( 0 );
             break;
+#endif
         case COMMAND_POST_DOOR:
             irkit_httpclient_post_door();
             break;
@@ -217,7 +221,9 @@ void on_ir_receive() {
 #endif
     if (IR_packedlength() > 0) {
         color.setLedColor( 0, 0, 1, true, 1 ); // received: blue blink for 1sec
+#ifdef USE_INTERNET
         irkit_httpclient_post_messages();
+#endif
     }
 }
 
@@ -230,7 +236,9 @@ void on_ir_xmit() {
 void on_timer() {
     color.onTimer(); // 200msec blink
 
+#ifdef USE_INTERNET
     irkit_http_on_timer();
+#endif
 
     TIMER_TICK( reconnect_timer );
 

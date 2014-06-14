@@ -93,8 +93,10 @@ int8_t GSwifi::setup(GSEventHandler on_disconnect, GSEventHandler on_reset) {
         return -1;
     }
 
+#ifdef USE_INTERNET
     // write this before AT&K1, cert includes XON or XOFF hex
     writeCert();
+#endif
 
     // enable software flow control
     command(PB("AT&K1",1), GSCOMMANDMODE_NORMAL);
@@ -683,6 +685,7 @@ int8_t GSwifi::writeEnd () {
     escape( "E" );
 }
 
+#ifdef USE_INTERNET
 void GSwifi::writeCert() {
     // Binary format, store in memory
     command( "AT+TCERTADD=cacert,0,753,1", GSCOMMANDMODE_NORMAL );
@@ -699,6 +702,7 @@ void GSwifi::writeCert() {
     setBusy(true);
     waitResponse(GS_TIMEOUT);
 }
+#endif
 
 GSwifi::GSMETHOD GSwifi::x2method(const char *method) {
     if (strncmp(method, "GET", 3) == 0) {
@@ -1179,6 +1183,7 @@ int8_t GSwifi::setRegDomain (char regdomain) {
     return 0;
 }
 
+#ifdef USE_INTERNET
 // returns -1 on error, >0 on success
 int8_t GSwifi::request(GSwifi::GSMETHOD method, const char *path, const char *body, uint16_t length, GSwifi::GSResponseHandler handler, uint8_t timeout, uint8_t is_binary) {
     char cmd[ GS_CMD_SIZE ];
@@ -1319,6 +1324,7 @@ int8_t GSwifi::post(const char *path, const char *body, uint16_t length, GSRespo
 int8_t GSwifi::postBinary(const char *path, const char *body, uint16_t length, GSResponseHandler handler, uint8_t timeout_second) {
     return request( GSMETHOD_POST, path, body, length, handler, timeout_second, true );
 }
+#endif // USE_INTERNET
 
 char* GSwifi::hostname() {
     char *ret = PB("IRKit%%%%", 2);

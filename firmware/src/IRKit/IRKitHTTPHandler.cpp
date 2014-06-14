@@ -33,6 +33,7 @@ extern void wifi_hardware_reset();
 extern void software_reset();
 extern volatile char sharedbuffer[];
 
+#ifdef USE_INTERNET
 // if we have recently received GET or POST /messages request,
 // delay our next request to API server for a while
 // to avoid concurrently processing receiving requests and requesting.
@@ -40,10 +41,13 @@ extern volatile char sharedbuffer[];
 // (except another person's trying to send from outside, at the same time)
 static volatile uint8_t suspend_polling_timer = TIMER_OFF;
 static volatile uint8_t polling_timer         = TIMER_OFF;
+#endif
 
 static uint32_t newest_message_id = 0; // on memory only should be fine
 static int8_t post_keys_cid;
+#ifdef USE_INTERNET
 static int8_t polling_cid = CID_UNDEFINED; // GET /m continues forever
+#endif
 
 #define POST_DOOR_BODY_LENGTH 61
 #define POST_KEYS_BODY_LENGTH 42
@@ -112,11 +116,14 @@ static int8_t on_post_door_response(int8_t cid, uint16_t status_code, GSwifi::GS
 
         ring_put( &commands, COMMAND_CLOSE );
         ring_put( &commands, cid );
+#ifdef USE_INTERNET
         ring_put( &commands, COMMAND_START_POLLING );
+#endif
 
         on_irkit_ready();
 
         break;
+#ifdef USE_INTERNET
     case 401:
     case HTTP_STATUSCODE_CLIENT_TIMEOUT:
         // keys have expired, we have to start listening for POST /wifi again
@@ -134,11 +141,13 @@ static int8_t on_post_door_response(int8_t cid, uint16_t status_code, GSwifi::GS
         ring_put( &commands, cid );
         ring_put( &commands, COMMAND_POST_DOOR );
         break;
+#endif
     }
 
     return 0;
 }
 
+#ifdef USE_INTERNET
 static int8_t on_get_messages_response(int8_t cid, uint16_t status_code, GSwifi::GSREQUESTSTATE state) {
     HTTPLOG_PRINT(P("< G /m ")); HTTPLOG_PRINTLN(status_code);
 
@@ -250,6 +259,7 @@ static int8_t on_post_messages_response(int8_t cid, uint16_t status_code, GSwifi
 
     return 0;
 }
+#endif // USE_INTERNET
 
 static int8_t on_get_messages_request(int8_t cid, GSwifi::GSREQUESTSTATE state) {
     if (state != GSwifi::GSREQUESTSTATE_RECEIVED) {
@@ -285,7 +295,9 @@ static int8_t on_get_messages_request(int8_t cid, GSwifi::GSREQUESTSTATE state) 
 
     IR_state( IR_IDLE );
 
+#ifdef USE_INTERNET
     TIMER_START( suspend_polling_timer, SUSPEND_GET_MESSAGES_INTERVAL );
+#endif
 
     return 0;
 }
@@ -311,12 +323,15 @@ static int8_t on_post_messages_request(int8_t cid, GSwifi::GSREQUESTSTATE state)
         ring_put( &commands, COMMAND_CLOSE );
         ring_put( &commands, cid );
 
+#ifdef USE_INTERNET
         TIMER_START( suspend_polling_timer, SUSPEND_GET_MESSAGES_INTERVAL );
+#endif
     }
 
     return 0;
 }
 
+#ifdef USE_INTERNET
 static int8_t on_post_keys_request(int8_t cid, GSwifi::GSREQUESTSTATE state) {
     if (state == GSwifi::GSREQUESTSTATE_RECEIVED) {
         // don't close other client requests, we can handle multiple concurrent client requests
@@ -330,6 +345,7 @@ static int8_t on_post_keys_request(int8_t cid, GSwifi::GSREQUESTSTATE state) {
         ring_put( &commands, COMMAND_POST_KEYS );
     }
 }
+#endif
 
 static int8_t on_post_wifi_request(uint8_t cid, GSwifi::GSREQUESTSTATE state) {
     if (state == GSwifi::GSREQUESTSTATE_BODY_START) {
@@ -370,10 +386,12 @@ static int8_t on_request(int8_t cid, int8_t routeid, GSwifi::GSREQUESTSTATE stat
     case 0: // POST /messages
         return on_post_messages_request(cid, state);
 
+#ifdef USE_INTERNET
     case 1: // POST /keys
         // when client requests for a new key,
         // we request server for one, and respond to client with the result from server
         return on_post_keys_request(cid, state);
+#endif
 
     case 2: // GET /messages
         return on_get_messages_request(cid, state);
@@ -388,12 +406,17 @@ static int8_t on_request(int8_t cid, int8_t routeid, GSwifi::GSREQUESTSTATE stat
 }
 
 int8_t irkit_httpclient_post_door() {
+#ifdef USE_INTERNET
     // devicekey=[0-9A-F]{32}&hostname=IRKit%%%%
     char body[POST_DOOR_BODY_LENGTH+1];
     sprintf(body, "devicekey=%s&hostname=%s", keys.getKey(), gs.hostname());
     return gs.post( "/d", body, POST_DOOR_BODY_LENGTH, &on_post_door_response, 50 );
+#else
+    on_post_door_response(CID_UNDEFINED, 200, GSwifi::GSREQUESTSTATE_RECEIVED);
+#endif
 }
 
+#ifdef USE_INTERNET
 int8_t irkit_httpclient_get_messages() {
     // /m?devicekey=C7363FDA0F06406AB11C29BA41272AE3&newer_than=4294967295
     char path[70];
@@ -431,6 +454,7 @@ int8_t irkit_httpclient_post_keys() {
 void irkit_httpclient_start_polling(uint8_t delay) {
     TIMER_START(polling_timer, delay);
 }
+#endif // USE_INTERNET
 
 void irkit_httpserver_register_handler() {
     gs.clearRoutes();
@@ -450,16 +474,21 @@ void irkit_httpserver_register_handler() {
 void irkit_http_init() {
     irkit_httpserver_register_handler();
 
+#ifdef USE_INTERNET
     polling_cid = CID_UNDEFINED;
+#endif
 }
 
+#ifdef USE_INTERNET
 void irkit_http_on_timer() {
     TIMER_TICK(polling_timer);
 
     TIMER_TICK(suspend_polling_timer);
 }
+#endif
 
 void irkit_http_loop() {
+#ifdef USE_INTERNET
     // long poll
     if (TIMER_FIRED(polling_timer)) {
         TIMER_STOP(polling_timer);
@@ -486,4 +515,5 @@ void irkit_http_loop() {
     if (TIMER_FIRED(suspend_polling_timer)) {
         TIMER_STOP(suspend_polling_timer);
     }
+#endif
 }

@@ -19,6 +19,7 @@
 
 #include "GSwifi_const.h"
 
+#ifdef USE_INTERNET
 // deviceapi.getirkit.com
 prog_uchar der[] PROGMEM = {
     ESCAPE, 'W',
@@ -118,6 +119,7 @@ prog_uchar der[] PROGMEM = {
     0xdd, 0x72, 0x16, 0x2a, 0x6f, 0x6, 0x5b, 0x38,
     0xa7,
 };
+#endif
 
 #endif // __CERT_H__
 
