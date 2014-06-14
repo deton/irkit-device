@@ -55,7 +55,34 @@ var crc8 = _dereq_("./crc8")
 const SECURITY_WPA_WPA2 = 8
 ,     SECURITY_WEP      = 2
 ,     SECURITY_NONE     = 0
+,     SECURITY_WPA2_ENTERPRISE = 9
 ;
+
+var SECURITY_FORCRC = {};
+SECURITY_FORCRC[SECURITY_WPA_WPA2] = 8;
+SECURITY_FORCRC[SECURITY_WEP] = 2;
+SECURITY_FORCRC[SECURITY_NONE] = 0;
+SECURITY_FORCRC[SECURITY_WPA2_ENTERPRISE] = 32;
+
+const EAPOUTER_FAST = 1
+,     EAPOUTER_TLS  = 2
+,     EAPOUTER_TTLS = 3
+,     EAPOUTER_PEAP = 4
+;
+
+var EAPOUTER_FORCRC = {};
+EAPOUTER_FORCRC[EAPOUTER_FAST] = 43;
+EAPOUTER_FORCRC[EAPOUTER_TLS] = 13;
+EAPOUTER_FORCRC[EAPOUTER_TTLS] = 21;
+EAPOUTER_FORCRC[EAPOUTER_PEAP] = 25;
+
+const EAPINNER_MSCHAP = 1
+,     EAPINNER_GTC    = 2
+;
+
+var EAPINNER_FORCRC = {};
+EAPINNER_FORCRC[EAPINNER_MSCHAP] = 26;
+EAPINNER_FORCRC[EAPINNER_GTC] = 6;
 
 function serializeSecurity (security) {
     return security;
@@ -89,14 +116,33 @@ function serializeDevicekey (devicekey) {
     return devicekey;
 }
 
+function serializeEapOuter (outer) {
+    return outer;
+}
+
+function serializeEapInner (inner) {
+    return inner;
+}
+
+function serializeEapUser (eapuser) {
+    var ret = "";
+    for (var i=0; i<eapuser.length; i++) {
+        ret += eapuser.charCodeAt( i ).toString( 16 ).toUpperCase();
+    }
+    return ret;
+}
+
 function serializeCRC (obj) {
     var crc;
-    crc = crc8( obj.security, 1 );
+    crc = crc8( SECURITY_FORCRC[obj.security], 1 );
     crc = crc8( obj.ssid, 33, crc );
     crc = crc8( obj.password, 64, crc );
     crc = crc8( 1, 1, crc ); // wifi_is_set
     crc = crc8( 0, 1, crc ); // wifi_was_valid
     crc = crc8( obj.devicekey, 33, crc );
+    crc = crc8( EAPOUTER_FORCRC[obj.eapouter], 1, crc );
+    crc = crc8( EAPINNER_FORCRC[obj.eapinner], 1, crc );
+    crc = crc8( obj.eapuser, 64, crc );
     return crc.toString( 16 ).toUpperCase();
 }
 
@@ -108,9 +154,9 @@ function serialize (obj) {
                                        : serializePassword(obj.password),
         serializeDevicekey(obj.devicekey),
         '2', // 2: TELEC, 1: FCC, 0: ETSI
-        '',
-        '',
-        '',
+        serializeEapOuter(obj.eapouter),
+        serializeEapInner(obj.eapinner),
+        serializeEapUser(obj.eapuser),
         '',
         '',
         serializeCRC(obj)
@@ -119,6 +165,7 @@ function serialize (obj) {
 
 module.exports = {
     serialize         : serialize,
+    SECURITY_WPA2_ENTERPRISE : SECURITY_WPA2_ENTERPRISE,
     SECURITY_WPA_WPA2 : SECURITY_WPA_WPA2,
     SECURITY_WEP      : SECURITY_WEP,
     SECURITY_NONE     : SECURITY_NONE

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>keyserializer</title>
+</head>
+<body>
+<form>
+	<ul>
+		<li>Security:<select name="security" id="security">
+			<option value="8" selected>WPA/WPA2</option>
+			<option value="2">WEP</option>
+			<option value="0">NONE</option>
+			<option value="9">WPA2 Enterprise</option></select>
+		<li>SSID: <input type="text" id="ssid">
+		<li>Password: <input type="password" id="password">
+		<li>devicekey: <input type="text" id="devicekey">
+		<li>EAP settings are used only for WPA2 Enterprise.
+		<li>EAP outer auth:<select name="eapouter" id="eapouter">
+			<option value="1">FAST</option>
+			<option value="2">TLS</option>
+			<option value="3">TTLS</option>
+			<option value="4" selected>PEAP</option></select>
+		<li>EAP inner auth:<select name="eapinner" id="eapinner">
+			<option value="1" selected>MSCHAP</option>
+			<option value="2">GTC</option></select>
+		<li>EAP user name:<input type="text" id="eapuser">
+		<li><button onclick="return serialize();">Serialize</button>
+	</ul>
+	<p>
+	<textarea disabled id="textarea" cols="40">
+	</textarea>
+</form>
+
+<script type="text/javascript" src="keyserializer.js"></script>
+<script type="text/javascript">
+function serialize() {
+	var security = parseInt(document.getElementById('security').value, 10);
+	var ssid = document.getElementById('ssid').value;
+	var password = document.getElementById('password').value;
+	var devicekey = document.getElementById('devicekey').value;
+	var eapouter = parseInt(document.getElementById('eapouter').value, 10);
+	var eapinner = parseInt(document.getElementById('eapinner').value, 10);
+	var eapuser = document.getElementById('eapuser').value;
+	var serialized = keyserializer.serialize({
+		security  : security,
+		ssid      : ssid,
+		password  : password,
+		devicekey : devicekey,
+		eapouter  : eapouter,
+		eapinner  : eapinner,
+		eapuser   : eapuser
+	});
+	document.getElementById('textarea').value = serialized;
+	return false;
+}
+</script>
+</body>
+</html>
