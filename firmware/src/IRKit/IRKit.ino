@@ -99,9 +99,7 @@ void setup() {
     wifi_hardware_reset();
     irkit_http_init();
 #else
-    while ( ! Serial ) ;
     IR_state( IR_IDLE );
-    on_irkit_ready();
 #endif
 
     // add your own code here!!
@@ -167,9 +165,19 @@ void loop() {
     IR_loop();
 
 #ifdef SERIAL_CTRL
-    while (Serial.available()) {
-        char letter = Serial.read();
-        parse_json( letter );
+    if (!Serial) {
+        if (!color.isBlinking()) {
+            color.setLedColor( 1, 0, 0, false ); // red: error
+        }
+    }
+    else {
+        if (!color.isBlinking()) {
+            on_irkit_ready();
+        }
+        while (Serial.available()) {
+            char letter = Serial.read();
+            parse_json( letter );
+        }
     }
 #endif
 

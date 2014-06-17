@@ -26,6 +26,7 @@ public:
     void setLedColor(bool colorR, bool colorG, bool colorB, bool blink, uint8_t blink_timeout);
     void off();
     void onTimer();
+    bool isBlinking() { return isBlinking_; }
 
 private:
     int pinR_;
