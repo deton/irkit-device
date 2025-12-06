@@ -46,6 +46,9 @@ static char commands_data[COMMAND_QUEUE_SIZE];
 #endif
 static FullColorLed color( FULLCOLOR_LED_R, FULLCOLOR_LED_G, FULLCOLOR_LED_B );
 
+#define LIGHT_TIMER_MS 28800000UL // 8 hour
+static char *lightdata = "{\"format\":\"raw\",\"freq\":38,\"data\":[9379,4878,1366,1514,1366,3341,1413,3341,1413,1622,1366,3341,1413,3341,1413,1413,1413,1622,1366,1622,1366,3341,1366,3341,1366,1622,1413,3341,1366,3341,1366,3341,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,3341,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1366,1366,20691,9379,4878,1366,1514,1514,3341,1366,3341,1366,1622,1413,3341,1366,3341,1366,1514,1514,1514,1366,1514,1366,3341,1413,3341,1413,1622,1366,3341,1413,3341,1413,3341,1413,1622,1413,1413,1413,1622,1413,1622,1413,1622,1413,1622,1413,1413,1413,3341,1366,1622,1413,1413,1413,1622,1413,1622,1413,1622,1413,1622,1413,1413,1413,1413,1413,1413,1413]}";
+
 #ifdef USE_WIFI
 struct RingBuffer commands;
 GSwifi gs(&Serial1X);
@@ -148,6 +151,14 @@ static void parse_json( char letter ) {
 
 void loop() {
     now = millis(); // always run first
+
+    if (now > LIGHT_TIMER_MS && *lightdata != 0) { // 8 hour
+        Serial.print("LIGHT ");
+        Serial.println(now);
+        for (; *lightdata != 0; lightdata++) {
+            parse_json(*lightdata);
+        }
+    }
 
 #ifdef USE_WIFI
     irkit_http_loop();
