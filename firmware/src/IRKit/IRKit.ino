@@ -51,6 +51,29 @@ static FullColorLed color( FULLCOLOR_LED_R, FULLCOLOR_LED_G, FULLCOLOR_LED_B );
 static char *lightdata = "{\"format\":\"raw\",\"freq\":38,\"data\":[9379,4878,1366,1514,1366,3341,1413,3341,1413,1622,1366,3341,1413,3341,1413,1413,1413,1622,1366,1622,1366,3341,1366,3341,1366,1622,1413,3341,1366,3341,1366,3341,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,3341,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1366,1366,20691,9379,4878,1366,1514,1514,3341,1366,3341,1366,1622,1413,3341,1366,3341,1366,1514,1514,1514,1366,1514,1366,3341,1413,3341,1413,1622,1366,3341,1413,3341,1413,3341,1413,1622,1413,1413,1413,1622,1413,1622,1413,1622,1413,1622,1413,1413,1413,3341,1366,1622,1413,1413,1413,1622,1413,1622,1413,1622,1413,1622,1413,1413,1413,1413,1413,1413,1413]}";
 #endif
 
+#define IRKIT_AS_LIGHTTIMER
+#ifdef IRKIT_AS_LIGHTTIMER
+# define LIGHT_TIMER_WHITE_MS 28800000UL // after 8 hour
+struct LightTimer_t {
+    uint16_t beforeMinute;
+    // params for setLedColor();
+    bool colorR;
+    bool colorG;
+    bool colorB;
+};
+# define LIGHT_TIMERS_LEN 7
+static struct LightTimer_t lightTimers[LIGHT_TIMERS_LEN] = {
+    {  0, 1, 1, 1}, // white
+    { 10, 1, 1, 0}, // yellow
+    { 20, 0, 1, 1}, // cyan
+    { 30, 1, 0, 1}, // magenta
+    { 45, 1, 0, 0}, // red
+    { 60, 0, 1, 0}, // green
+    { 90, 0, 0, 1}, // blue
+};
+# define THRESHOLD_MS(min) ((LIGHT_TIMER_WHITE_MS) - (min) * 60000)
+#endif
+
 #ifdef USE_WIFI
 struct RingBuffer commands;
 GSwifi gs(&Serial1X);
@@ -181,14 +204,18 @@ void loop() {
 
 #ifdef SERIAL_CTRL
     if (!Serial) {
+# ifndef IRKIT_AS_LIGHTTIMER
         if (!color.isBlinking()) {
             color.setLedColor( 1, 0, 0, false ); // red: error
         }
+# endif
     }
     else {
+# ifndef IRKIT_AS_LIGHTTIMER
         if (!color.isBlinking()) {
             on_irkit_ready();
         }
+# endif
         while (Serial.available()) {
             char letter = Serial.read();
             parse_json( letter );
@@ -240,6 +267,20 @@ void loop() {
 #endif
 
     // add your own code here!!
+
+#ifdef IRKIT_AS_LIGHTTIMER
+    int i;
+    for (i = 0; i < LIGHT_TIMERS_LEN; i++) {
+        const struct LightTimer_t lt = lightTimers[i];
+        if (now >= THRESHOLD_MS(lt.beforeMinute)) {
+            color.setLedColor(lt.colorR, lt.colorG, lt.colorB, false);
+            break;
+        }
+    }
+    if (i >= LIGHT_TIMERS_LEN) {
+        color.setLedColor( 0, 0, 0, false );
+    }
+#endif
 }
 
 #ifdef USE_WIFI
