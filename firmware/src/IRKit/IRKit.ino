@@ -46,6 +46,43 @@ static char commands_data[COMMAND_QUEUE_SIZE];
 #endif
 static FullColorLed color( FULLCOLOR_LED_R, FULLCOLOR_LED_G, FULLCOLOR_LED_B );
 
+#ifdef IRKIT_AS_LIGHTONTIMER
+#define LIGHT_TIMER_MS 28800000UL // 8 hour
+// Ceiling light MARUZEN RE-10968
+static char *lightdata = "{\"format\":\"raw\",\"freq\":38,\"data\":[9379,4878,1366,1514,1366,3341,1413,3341,1413,1622,1366,3341,1413,3341,1413,1413,1413,1622,1366,1622,1366,3341,1366,3341,1366,1622,1413,3341,1366,3341,1366,3341,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,3341,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1622,1366,1366,1366,20691,9379,4878,1366,1514,1514,3341,1366,3341,1366,1622,1413,3341,1366,3341,1366,1514,1514,1514,1366,1514,1366,3341,1413,3341,1413,1622,1366,3341,1413,3341,1413,3341,1413,1622,1413,1413,1413,1622,1413,1622,1413,1622,1413,1622,1413,1413,1413,3341,1366,1622,1413,1413,1413,1622,1413,1622,1413,1622,1413,1622,1413,1413,1413,1413,1413,1413,1413]}";
+#endif
+
+#define IRKIT_AS_LIGHTTIMER
+#ifdef IRKIT_AS_LIGHTTIMER
+# define LIGHT_TIMER_WHITE_MS 28800000UL // after 8 hour
+struct LightTimer_t {
+    uint16_t beforeMinute;
+    // params for setLedColor();
+    bool colorR;
+    bool colorG;
+    bool colorB;
+    uint8_t timer_interval_sec;
+};
+# define LIGHT_TIMERS_LEN 14
+static struct LightTimer_t lightTimers[LIGHT_TIMERS_LEN] = {
+    {  0, 1, 1, 1, 1}, // white blink
+    { 10, 1, 1, 0, 1}, // yellow blink
+    { 20, 0, 1, 1, 1}, // cyan blink
+    { 30, 1, 0, 1, 1}, // magenta blink
+    { 45, 1, 0, 0, 1}, // red blink
+    { 60, 0, 1, 0, 1}, // green blink
+    { 90, 0, 0, 1, 1}, // blue blink
+    {120, 1, 1, 1, TIMER_OFF}, // white
+    {180, 1, 1, 0, TIMER_OFF}, // yellow
+    {240, 0, 1, 1, TIMER_OFF}, // cyan
+    {300, 1, 0, 1, TIMER_OFF}, // magenta
+    {360, 1, 0, 0, TIMER_OFF}, // red
+    {420, 0, 1, 0, TIMER_OFF}, // green
+    {480, 0, 0, 1, TIMER_OFF}, // blue
+};
+# define THRESHOLD_MS(min) ((LIGHT_TIMER_WHITE_MS) - (min) * 60000)
+#endif
+
 #ifdef USE_WIFI
 struct RingBuffer commands;
 GSwifi gs(&Serial1X);
@@ -149,6 +186,16 @@ static void parse_json( char letter ) {
 void loop() {
     now = millis(); // always run first
 
+#ifdef IRKIT_AS_LIGHTONTIMER
+    if (now > LIGHT_TIMER_MS && *lightdata != 0) { // 8 hour
+        Serial.print("LIGHT ");
+        Serial.println(now);
+        for (; *lightdata != 0; lightdata++) {
+            parse_json(*lightdata);
+        }
+    }
+#endif
+
 #ifdef USE_WIFI
     irkit_http_loop();
 
@@ -166,14 +213,18 @@ void loop() {
 
 #ifdef SERIAL_CTRL
     if (!Serial) {
+# ifndef IRKIT_AS_LIGHTTIMER
         if (!color.isBlinking()) {
             color.setLedColor( 1, 0, 0, false ); // red: error
         }
+# endif
     }
     else {
+# ifndef IRKIT_AS_LIGHTTIMER
         if (!color.isBlinking()) {
             on_irkit_ready();
         }
+# endif
         while (Serial.available()) {
             char letter = Serial.read();
             parse_json( letter );
@@ -225,6 +276,20 @@ void loop() {
 #endif
 
     // add your own code here!!
+
+#ifdef IRKIT_AS_LIGHTTIMER
+    int i;
+    for (i = 0; i < LIGHT_TIMERS_LEN; i++) {
+        const struct LightTimer_t lt = lightTimers[i];
+        if (now >= THRESHOLD_MS(lt.beforeMinute)) {
+            color.setLedColor(lt.colorR, lt.colorG, lt.colorB, lt.timer_interval_sec);
+            break;
+        }
+    }
+    if (i >= LIGHT_TIMERS_LEN) {
+        color.setLedColor( 0, 0, 0, false );
+    }
+#endif
 }
 
 #ifdef USE_WIFI
